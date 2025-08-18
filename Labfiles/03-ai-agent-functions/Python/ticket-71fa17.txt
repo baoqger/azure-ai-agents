@@ -1,0 +1,4 @@
+Support ticket: 71fa17
+Submitted by: alex@contoso.com
+Description:
+Computer won't start.
