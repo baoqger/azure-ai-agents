@@ -45,7 +45,8 @@ def main():
             model=model_deployment,
             name="support-agent",
             instructions="""You are a technical support agent.
-                            When a user has a technical issue, you get their email address and a description of the issue.
+                            When a user has a technical issue, you should ask the user's name, then send a greeding message to the user! 
+                            Then you get their email address and a description of the issue.
                             Then you use those values to submit a support ticket using the function available to you.
                             If a file is saved, tell the user the file name.
                         """,

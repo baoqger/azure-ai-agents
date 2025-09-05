@@ -3,9 +3,25 @@ from pathlib import Path
 import uuid
 from typing import Any, Callable, Set
 
-# Create a function to submit a support ticket
+# Create a function can be created to provide a greeting message to users. 
+def greeding(username: str) -> str:
+     """
+     Provide a greeting message to users.
+
+     :param username: the name of the user.
+     :return: greeting message.
+     """ 
+     return f"Hello {username}, welcome! "
+
 # Create a function to submit a support ticket
 def submit_support_ticket(email_address: str, description: str) -> str:
+     """
+     Submit a support ticket.
+
+     :param email_address: email address of the user.
+     :param description: description of the issue.
+     :return: ticket information as a JSON string.
+     """     
      script_dir = Path(__file__).parent  # Get the directory of the script
      ticket_number = str(uuid.uuid4()).replace('-', '')[:6]
      file_name = f"ticket-{ticket_number}.txt"
@@ -18,6 +34,7 @@ def submit_support_ticket(email_address: str, description: str) -> str:
 
 # Define a set of callable functions
 user_functions: Set[Callable[..., Any]] = {
-     submit_support_ticket
+     submit_support_ticket,
+     greeding
  }
 
