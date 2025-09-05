@@ -21,7 +21,7 @@ def main():
 
     # Display the data to be analyzed
     script_dir = Path(__file__).parent  # Get the directory of the script
-    file_path = script_dir / 'data.txt'
+    file_path = script_dir / 'Premier_League_2024_25_Table.csv'
 
     with file_path.open('r') as file:
         data = file.read() + "\n"
@@ -90,7 +90,6 @@ def main():
                 print(f"Last Message: {last_msg.text.value}")
 
         # Get the conversation history
-    
         print("\nConversation Log:\n")
         messages = agent_client.messages.list(thread_id=thread.id, order=ListSortOrder.ASCENDING)
         for message in messages:
@@ -98,7 +97,6 @@ def main():
                 last_msg = message.text_messages[-1]
                 print(f"{message.role}: {last_msg.text.value}\n")
                 
-        # Clean up
 
     
 
