@@ -43,12 +43,11 @@ def main():
                 
         agent = agent_client.create_agent(
             model=model_deployment,
-            name="support-agent",
-            instructions="""You are a technical support agent.
-                            When a user has a technical issue, you should ask the user's name, then send a greeding message to the user! 
-                            Then you get their email address and a description of the issue.
-                            Then you use those values to submit a support ticket using the function available to you.
-                            If a file is saved, tell the user the file name.
+            name="weather-support-agent",
+            instructions="""You are a weather support agent.
+                            When a user has a weather related question, you should ask the user's name, then send a greeding message to the user by using the function available to you.! 
+                            Then you obtain the city name for which the user wants to know the weather.
+                            Then you use those values to get the weather by using the function available to you.
                         """,
             toolset=toolset
         )

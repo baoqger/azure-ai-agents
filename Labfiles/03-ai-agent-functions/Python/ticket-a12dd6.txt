@@ -1,4 +1,0 @@
-Support ticket: a12dd6
-Submitted by: alex@contoso.com
-Description:
-User's computer won't start.

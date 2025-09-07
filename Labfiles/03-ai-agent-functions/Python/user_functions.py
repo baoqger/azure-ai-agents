@@ -13,6 +13,19 @@ def greeding(username: str) -> str:
      """ 
      return f"Hello {username}, welcome! "
 
+def get_weather(city: str) -> str:
+     """
+     Get the weather information for your city.
+
+     :param city: the name of the city.
+     :return: weather information as a JSON object.
+     """ 
+     data = {
+        "city": city,
+        "temperature": 30
+     }
+     return data
+
 # Create a function to submit a support ticket
 def submit_support_ticket(email_address: str, description: str) -> str:
      """
@@ -34,7 +47,7 @@ def submit_support_ticket(email_address: str, description: str) -> str:
 
 # Define a set of callable functions
 user_functions: Set[Callable[..., Any]] = {
-     submit_support_ticket,
+     get_weather,
      greeding
  }
 
