@@ -42,8 +42,8 @@ def main():
     )
 
     # You can also add or remove allowed tools dynamically
-    search_api_code = "search_azure_rest_api_code"
-    mcp_tool.allow_tool(search_api_code)
+    # search_api_code = "search_azure_rest_api_code"
+    # mcp_tool.allow_tool(search_api_code)
     print(f"Allowed tools: {mcp_tool.allowed_tools}")
 
     # Create agent with MCP tool and process agent run
@@ -51,7 +51,7 @@ def main():
         # Create a new agent.
         # NOTE: To reuse existing agent, fetch it with get_agent(agent_id)
         agent = agents_client.create_agent(
-            model=os.environ["MODEL_DEPLOYMENT_NAME"],
+            model=model_deployment,
             name="my-mcp-agent",
             instructions="You are a helpful agent that can use MCP tools to assist users. Use the available MCP tools to answer questions and perform tasks.",
             tools=mcp_tool.definitions,
@@ -73,7 +73,7 @@ def main():
         print(f"Created message, ID: {message.id}")  
 
         # Create and process agent run in thread with MCP tools
-        mcp_tool.update_headers("SuperSecret", "123456")
+        # mcp_tool.update_headers("SuperSecret", "123456")
         # mcp_tool.set_approval_mode("never")  # Uncomment to disable approval requirement
         run = agents_client.runs.create(thread_id=thread.id, agent_id=agent.id, tool_resources=mcp_tool.resources)
         print(f"Created run, ID: {run.id}")
