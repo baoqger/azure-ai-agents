@@ -36,8 +36,8 @@ def main():
 
     mcp_tool.set_approval_mode("never")
 
-    toolset = ToolSet()
-    toolset.add(mcp_tool)
+    # toolset = ToolSet()
+    # toolset.add(mcp_tool)
 
     # Create agent with MCP tool and process agent run
     with agents_client:
@@ -50,7 +50,7 @@ def main():
             You have access to an MCP server called `mslearn` - this tool allows you to 
             search through Microsoft's latest official documentation. Use the available MCP tools 
             to answer questions and perform tasks.""",
-            toolset=toolset
+            tools=mcp_tool.definitions,
         )        
 
         # Log info
@@ -71,7 +71,7 @@ def main():
         print(f"Created message, ID: {message.id}")        
 
         # Create and process agent run in thread with MCP tools
-        run = agents_client.runs.create_and_process(thread_id=thread.id, agent_id=agent.id)
+        run = agents_client.runs.create_and_process(thread_id=thread.id, agent_id=agent.id, tool_resources=mcp_tool.resources)
         print(f"Created run, ID: {run.id}")        
         
         # Check run status
