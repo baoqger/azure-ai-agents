@@ -19,6 +19,12 @@ project_endpoint = os.getenv("PROJECT_ENDPOINT")
 model_deployment = os.getenv("MODEL_DEPLOYMENT_NAME")
 
 async def connect_to_server(exit_stack: AsyncExitStack):
+    # server_params = StdioServerParameters(
+    #     command="dotnet",
+    #     args=["run", "--project", "C:\develop\study\test\test-mcp\SampleMcpServer"],
+    #     env=None
+    # )
+
     server_params = StdioServerParameters(
         command="python",
         args=["server.py"],
