@@ -25,9 +25,15 @@ async def connect_to_server(exit_stack: AsyncExitStack):
     #     env=None
     # )
 
+    # server_params = StdioServerParameters(
+    #     command="python",
+    #     args=["server.py"],
+    #     env=None
+    # )
+
     server_params = StdioServerParameters(
-        command="python",
-        args=["server.py"],
+        command="C:\\develop\\open-source\\azure-ai-agents-dotnet\\MiniMCPServer\\bin\\Release\\net8.0\\MiniMCPServer.exe",
+        args=[],
         env=None
     )
 
