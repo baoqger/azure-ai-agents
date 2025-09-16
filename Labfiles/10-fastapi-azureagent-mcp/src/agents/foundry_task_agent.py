@@ -1,8 +1,49 @@
 import os
+from contextlib import AsyncExitStack
 from typing import Optional
+from mcp import ClientSession, StdioServerParameters
+from mcp.types import Tool
+from mcp.client.stdio import stdio_client
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
+from azure.ai.agents.models import FunctionTool
 from ..models import ChatMessage, Role
+
+async def connect_to_server(exit_stack: AsyncExitStack):
+
+    server_params = StdioServerParameters(
+        command="C:\\develop\\open-source\\azure-ai-agents-dotnet\\MiniMCPServer\\bin\\Release\\net8.0\\MiniMCPServer.exe",
+        args=[],
+        env=None
+    )
+
+    # Start the MCP server
+    stdio_transport = await exit_stack.enter_async_context(stdio_client(server_params))
+    stdio, write = stdio_transport
+
+    # Create an MCP client session
+    session = await exit_stack.enter_async_context(ClientSession(stdio, write))
+    await session.initialize()
+
+    # List available tools
+    response = await session.list_tools()
+    tools = response.tools  
+
+    # Build a function for each tool
+    def make_tool_func(tool_name):
+        async def tool_func(**kwargs):
+            result = await session.call_tool(tool_name, kwargs)
+            return result
+        
+        tool_func.__name__ = tool_name
+        return tool_func  
+
+    functions_dict = {tool.name: make_tool_func(tool.name) for tool in tools}
+    mcp_function_tool = FunctionTool(functions=list(functions_dict.values())) 
+
+    print("\nConnected to server with tools:", [tool.name for tool in tools]) 
+    return mcp_function_tool
+
 
 
 class FoundryTaskAgent:
@@ -20,18 +61,19 @@ class FoundryTaskAgent:
     - AZURE_AI_FOUNDRY_AGENT_ID: The identifier of the agent to use
     """
     
-    def __init__(self):
+    def __init__(self, mcpTools: FunctionTool):
+        self.tools = mcpTools
         self.project_client = None
-        self.agent_id = None
         self.thread_id = None
-        
+        self.agent_id = None
+
         # Initialize the agent
         endpoint = os.getenv("AZURE_AI_FOUNDRY_PROJECT_ENDPOINT")
-        agent_id = os.getenv("AZURE_AI_FOUNDRY_AGENT_ID")
-        
-        if not endpoint or not agent_id:
+        model_deployment = os.getenv("MODEL_DEPLOYMENT_NAME")
+
+        if not endpoint or not model_deployment:
             print("Azure AI Foundry configuration missing. Set AZURE_AI_FOUNDRY_PROJECT_ENDPOINT and AZURE_AI_FOUNDRY_AGENT_ID")
-            return
+            return  
         
         try:
             # Create the project client using Azure credentials
@@ -39,8 +81,25 @@ class FoundryTaskAgent:
                 endpoint=endpoint,
                 credential=DefaultAzureCredential()
             )
-            self.agent_id = agent_id
-            
+
+            # Create the agent
+            agent = self.project_client.agents.create_agent(
+                model=model_deployment,
+                name="inventory-agent",
+                instructions="""
+                You are an inventory assistant. Here are some general guidelines:
+                - Recommend restock if item inventory < 10  and weekly sales > 15
+                - Recommend clearance if item inventory > 20 and weekly sales < 5
+                """,
+                tools=mcpTools.definitions
+            )  
+            self.agent_id = agent.id
+
+            print(f"Created agent: {self.agent_id}")
+
+            # Enable auto function calling
+            self.project_client.agents.enable_auto_function_calls(tools=mcpTools)
+
             # Create a thread for this session
             thread = self.project_client.agents.threads.create()
             self.thread_id = thread.id
@@ -50,7 +109,7 @@ class FoundryTaskAgent:
         except ImportError as e:
             print(f"Azure AI Projects SDK not available. Install azure-ai-projects package: {e}")
         except Exception as e:
-            print(f"Failed to initialize Azure AI Foundry agent: {e}")
+            print(f"Failed to initialize Azure AI Foundry agent: {e}")        
     
     async def process_message(self, message: str) -> ChatMessage:
         """
@@ -62,7 +121,7 @@ class FoundryTaskAgent:
         Returns:
             ChatMessage object containing the assistant's response
         """
-        if not self.project_client or not self.agent_id or not self.thread_id:
+        if not self.project_client or not self.thread_id:
             return ChatMessage(
                 role=Role.ASSISTANT,
                 content="Azure AI Foundry agent is not properly configured. Please check your settings."
@@ -103,8 +162,10 @@ class FoundryTaskAgent:
                         if hasattr(msg, 'content') and msg.content:
                             for content_item in msg.content:
                                 if hasattr(content_item, 'text') and hasattr(content_item.text, 'value'):
+                                    print("Found text content:", content_item.text.value)
                                     content += content_item.text.value
                                 elif hasattr(content_item, 'value'):
+                                    print("Found generic content:", content_item.value)
                                     content += str(content_item.value)
                         
                         return ChatMessage(
@@ -135,3 +196,8 @@ class FoundryTaskAgent:
         """Cleanup method for session management (no-op for Azure AI Foundry)."""
         # Azure AI Foundry handles cleanup automatically
         pass
+
+    @classmethod
+    async def create(cls, exit_stack: AsyncExitStack):
+        functiontool = await connect_to_server(exit_stack)
+        return cls(functiontool)

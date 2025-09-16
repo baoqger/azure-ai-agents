@@ -1,8 +1,9 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import os
+from contextlib import AsyncExitStack
 from dotenv import load_dotenv
 from .services import TaskService
 from .agents import LangGraphTaskAgent, FoundryTaskAgent
@@ -33,13 +34,31 @@ class TaskManagerApp:
             ]
         )
         
+        self.foundry_agent = None
+        self.exit_stack = None
+
         # Initialize services
         self.task_service = TaskService()
         self.langgraph_agent = LangGraphTaskAgent(self.task_service)
-        self.foundry_agent = FoundryTaskAgent()
+        
+        #self.foundry_agent = FoundryTaskAgent()
         
         self._setup_middleware()
-        self._setup_routes()
+        #self._setup_routes()
+
+        @self.app.on_event("startup")
+        async def startup_event():
+            self.exit_stack = AsyncExitStack()
+            await self.exit_stack.__aenter__()
+            self.foundry_agent = await FoundryTaskAgent.create(self.exit_stack)
+            self._setup_routes()  
+
+        @self.app.on_event("shutdown")
+        async def shutdown_event():
+            # delete the Agent on Azure
+            self.foundry_agent.project_client.agents.delete_agent(self.foundry_agent.agent_id) 
+            if self.exit_stack:
+                await self.exit_stack.__aexit__(None, None, None)      
     
     def _setup_middleware(self):
         """Set up CORS and other middleware."""
