@@ -1,4 +1,5 @@
-import os
+import os, time
+import json
 from contextlib import AsyncExitStack
 from typing import Optional
 from mcp import ClientSession, StdioServerParameters
@@ -39,10 +40,10 @@ async def connect_to_server(exit_stack: AsyncExitStack):
         return tool_func  
 
     functions_dict = {tool.name: make_tool_func(tool.name) for tool in tools}
-    mcp_function_tool = FunctionTool(functions=list(functions_dict.values())) 
+    # mcp_function_tool = FunctionTool(functions=list(functions_dict.values())) 
 
     print("\nConnected to server with tools:", [tool.name for tool in tools]) 
-    return mcp_function_tool
+    return functions_dict
 
 
 
@@ -61,8 +62,10 @@ class FoundryTaskAgent:
     - AZURE_AI_FOUNDRY_AGENT_ID: The identifier of the agent to use
     """
     
-    def __init__(self, mcpTools: FunctionTool):
+    def __init__(self, functions_dict):
+        mcpTools = FunctionTool(functions=list(functions_dict.values()))
         self.tools = mcpTools
+        self.functions_dict = functions_dict
         self.project_client = None
         self.thread_id = None
         self.agent_id = None
@@ -137,11 +140,48 @@ class FoundryTaskAgent:
             print(f"Created message, ID: {message_obj.id}")
             
             # Create and process the run
-            run = self.project_client.agents.runs.create_and_process(
+            run = self.project_client.agents.runs.create(
                 thread_id=self.thread_id,
                 agent_id=self.agent_id
             )
-            print(f"Run finished with status: {run.status}")
+
+            while run.status in ["queued", "in_progress", "requires_action"]:
+                time.sleep(1)
+                run = self.project_client.agents.runs.get(thread_id=self.thread_id, run_id=run.id)
+                tool_outputs = []
+
+                if run.status == "requires_action":
+
+                    print("status:  requires_action")
+
+                    tool_calls = run.required_action.submit_tool_outputs.tool_calls
+
+                    for tool_call in tool_calls:
+
+                        # Retrieve the matching function tool
+                        function_name = tool_call.function.name
+                        args_json = tool_call.function.arguments
+                        kwargs = json.loads(args_json)
+                        required_function = self.functions_dict.get(function_name)
+                        
+                        print("function call name:", function_name)
+                        print("function call args:", args_json, kwargs)
+
+                        # Invoke the function
+                        output = await required_function(**kwargs)
+
+                        print("function output:", output)
+
+                        # Append the output text
+                        tool_outputs.append({
+                            "tool_call_id": tool_call.id,
+                            "output": output.content[0].text,
+                        })
+                    
+                    # Submit the tool call output
+                    self.project_client.agents.runs.submit_tool_outputs(thread_id=self.thread_id, run_id=run.id, tool_outputs=tool_outputs)
+
+            print(f"Run finished with status:  {run.status}")
             
             if run.status == "failed":
                 print(f"Run failed: {run.last_error}")
@@ -199,5 +239,5 @@ class FoundryTaskAgent:
 
     @classmethod
     async def create(cls, exit_stack: AsyncExitStack):
-        functiontool = await connect_to_server(exit_stack)
-        return cls(functiontool)
+        functionDics = await connect_to_server(exit_stack)
+        return cls(functionDics)

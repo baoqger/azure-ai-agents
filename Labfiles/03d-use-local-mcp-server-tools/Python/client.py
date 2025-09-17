@@ -118,6 +118,8 @@ async def chat_loop(session):
 
             if run.status == "requires_action":
 
+                print("status:  requires_action")
+
                 tool_calls = run.required_action.submit_tool_outputs.tool_calls
 
                 for tool_call in tool_calls:
@@ -127,9 +129,13 @@ async def chat_loop(session):
                     args_json = tool_call.function.arguments
                     kwargs = json.loads(args_json)
                     required_function = functions_dict.get(function_name)
+                    
+                    print("function call name:", function_name)
 
                     # Invoke the function
                     output = await required_function(**kwargs)
+
+                    print("function output:", output)
 
                     # Append the output text
                     tool_outputs.append({
