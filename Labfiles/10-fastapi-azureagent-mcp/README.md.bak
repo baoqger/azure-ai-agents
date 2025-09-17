@@ -1,0 +1,17 @@
+To develop AI tools that are truly practical and easy to use, we need a full-stack project scaffold.
+For this purpose, I developed a full-stack AI Agent POC project, which includes the following core components:
+
+ 
+
+•	Azure AI Agent and the gpt-4o model deployed on Azure AI Foundry
+o	The Azure AI Agent is a fully managed AI Agent hosted on Azure cloud, using the gpt-4o large model deployed on Azure AI Foundry as the analysis engine.
+•	Customized MCP server
+o	A custom MCP server service can provide various data and information. For example, LiuLin developed PrismMCPServer to fetch data from various RCIS platforms.
+•	Backend service built with FastAPI
+o	The FastAPI service provides three main capabilities: communicating with the frontend app to receive user prompts; acting as an MCP client to connect to the MCP server; and acting as an Agent Client to operate the cloud-based Agent.
+•	Frontend app built with React
+o	The frontend app offers a much more user-friendly interactive environment compared to CLI commands.
+
+
+ 
+
