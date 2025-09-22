@@ -40,4 +40,5 @@ def get_weekly_sales() -> dict:
 
 if __name__ == "__main__":
     # Run the MCP server on localhost and port 8080
-    mcp.run(transport="http", host="127.0.0.1", port=8000, path="/mcp")
+    # mcp.run(transport="http", host="127.0.0.1", port=8000, path="/mcp")
+    mcp.run()

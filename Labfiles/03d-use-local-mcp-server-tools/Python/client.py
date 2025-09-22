@@ -24,18 +24,20 @@ async def connect_to_server(exit_stack: AsyncExitStack):
     #     args=["run", "--project", "C:\develop\study\test\test-mcp\SampleMcpServer"],
     #     env=None
     # )
-
-    # server_params = StdioServerParameters(
-    #     command="python",
-    #     args=["server.py"],
-    #     env=None
-    # )
-
+    parent_server_path = os.path.join("..", "..", "09-min-mcp-server", "server.py")
+    print("Starting server from:", parent_server_path)
     server_params = StdioServerParameters(
-        command="C:\\develop\\open-source\\azure-ai-agents-dotnet\\MiniMCPServer\\bin\\Release\\net8.0\\MiniMCPServer.exe",
-        args=[],
+        command="python",
+        # args=["server.py"],
+        args=["..\\..\\09-min-mcp-server\\server.py"],
         env=None
     )
+
+    # server_params = StdioServerParameters(
+    #     command="C:\\develop\\open-source\\azure-ai-agents-dotnet\\MiniMCPServer\\bin\\Release\\net8.0\\MiniMCPServer.exe",
+    #     args=[],
+    #     env=None
+    # )
 
     # Start the MCP server
     stdio_transport = await exit_stack.enter_async_context(stdio_client(server_params))

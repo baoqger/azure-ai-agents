@@ -9,7 +9,7 @@ mcp = FastMCP("Inventory")
 def get_inventory_levels() -> dict:
     """Returns current inventory for all products."""
     return {
-        "Moisturizer": 6,
+        "Moisturizer": 5,
         "Shampoo": 8,
         "Body Spray": 28,
         "Hair Gel": 5, 
