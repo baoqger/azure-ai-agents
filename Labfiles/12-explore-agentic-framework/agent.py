@@ -6,14 +6,15 @@ from typing import Annotated
 
 from dotenv import load_dotenv
 
-from IPython.display import display, HTML
+# from IPython.display import display, HTML
 
 from openai import AsyncOpenAI
 
 from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel.contents import FunctionCallContent, FunctionResultContent, StreamingTextContent
-from semantic_kernel.functions import kernel_function
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
+from semantic_kernel.connectors.ai import FunctionChoiceBehavior, PromptExecutionSettings
+from semantic_kernel.contents import FunctionCallContent, FunctionResultContent, StreamingTextContent, ChatMessageContent
+from semantic_kernel.functions import kernel_function, KernelArguments
 
 import random   
 
@@ -56,22 +57,32 @@ class DestinationsPlugin:
     
 
 load_dotenv()
-client = AsyncOpenAI(
-    api_key=os.environ.get("GITHUB_TOKEN"), 
-    base_url="https://models.inference.ai.azure.com/",
+
+api_key = os.environ.get("API_KEY")
+deployment_name = os.environ.get("MODEL_DEPLOYMENT_NAME")
+endpoint = os.environ.get("PROJECT_ENDPOINT")
+
+# By providing the chat completion service directly
+
+service_id = "agent"
+
+ai_service = AzureChatCompletion(
+    service_id=service_id, 
+    api_key= api_key,
+    deployment_name= deployment_name,
+    endpoint=endpoint
 )
 
-# Create an AI Service that will be used by the `ChatCompletionAgent`
-chat_completion_service = OpenAIChatCompletion(
-    ai_model_id="gpt-4o-mini",
-    async_client=client,
-)
+# Configure the function choice behavior to auto invoke kernel functions
+settings =  PromptExecutionSettings()
+settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
 
 agent = ChatCompletionAgent(
-    service=chat_completion_service, 
+    service=ai_service,
     plugins=[DestinationsPlugin()],
     name="TravelAgent",
     instructions="You are a helpful AI Agent that can help plan vacations for customers at random destinations",
+    arguments=KernelArguments(settings=settings),
 )
 
 user_inputs = [
@@ -79,76 +90,32 @@ user_inputs = [
     "I don't like that destination. Plan me another vacation.",
 ]
 
+# This callback function will be called for each intermediate message
+# Which will allow one to handle FunctionCallContent and FunctionResultContent
+# If the callback is not provided, the agent will return the final response
+# with no intermediate tool call steps.
+async def handle_intermediate_steps(message: ChatMessageContent) -> None:
+    for item in message.items or []:
+        if isinstance(item, FunctionCallContent):
+            print(f"Function Call:> {item.name} with arguments: {item.arguments}")
+        elif isinstance(item, FunctionResultContent):
+            print(f"Function Result:> {item.result} for function: {item.name}")
+        else:
+            print(f"{message.role}: {message.content}")
+
 async def main():
     thread: ChatHistoryAgentThread | None = None
 
     for user_input in user_inputs:
-        html_output = (
-            f"<div style='margin-bottom:10px'>"
-            f"<div style='font-weight:bold'>User:</div>"
-            f"<div style='margin-left:20px'>{user_input}</div></div>"
-        )
+        print(f"# User: {user_input}\n")
 
-        agent_name = None
-        full_response: list[str] = []
-        function_calls: list[str] = []
-
-        # Buffer to reconstruct streaming function call
-        current_function_name = None
-        argument_buffer = ""
-
-        async for response in agent.invoke_stream(
+        async for response in agent.invoke(
             messages=user_input,
             thread=thread,
+            on_intermediate_message=handle_intermediate_steps,
         ):
+            print(f"# {response.role}: {response}")
             thread = response.thread
-            agent_name = response.name
-            content_items = list(response.items)
-
-            for item in content_items:
-                if isinstance(item, FunctionCallContent):
-                    if item.function_name:
-                        current_function_name = item.function_name
-
-                    # Accumulate arguments (streamed in chunks)
-                    if isinstance(item.arguments, str):
-                        argument_buffer += item.arguments
-                elif isinstance(item, FunctionResultContent):
-                    # Finalize any pending function call before showing result
-                    if current_function_name:
-                        formatted_args = argument_buffer.strip()
-                        try:
-                            parsed_args = json.loads(formatted_args)
-                            formatted_args = json.dumps(parsed_args)
-                        except Exception:
-                            pass  # leave as raw string
-
-                        function_calls.append(f"Calling function: {current_function_name}({formatted_args})")
-                        current_function_name = None
-                        argument_buffer = ""
-
-                    function_calls.append(f"\nFunction Result:\n\n{item.result}")
-                elif isinstance(item, StreamingTextContent) and item.text:
-                    full_response.append(item.text)
-
-        if function_calls:
-            html_output += (
-                "<div style='margin-bottom:10px'>"
-                "<details>"
-                "<summary style='cursor:pointer; font-weight:bold; color:#0066cc;'>Function Calls (click to expand)</summary>"
-                "<div style='margin:10px; padding:10px; background-color:#f8f8f8; "
-                "border:1px solid #ddd; border-radius:4px; white-space:pre-wrap; font-size:14px; color:#333;'>"
-                f"{chr(10).join(function_calls)}"
-                "</div></details></div>"
-            )
-
-        html_output += (
-            "<div style='margin-bottom:20px'>"
-            f"<div style='font-weight:bold'>{agent_name or 'Assistant'}:</div>"
-            f"<div style='margin-left:20px; white-space:pre-wrap'>{''.join(full_response)}</div></div><hr>"
-        )
-
-        display(HTML(html_output))
 
 if __name__ == "__main__":
     asyncio.run(main()) 
