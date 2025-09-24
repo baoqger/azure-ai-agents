@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 from datetime import datetime
+from dotenv import load_dotenv
 
 from azure.identity import AzureCliCredential
 
@@ -11,6 +12,11 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.kernel import Kernel
 
+load_dotenv()
+api_key = os.environ.get("API_KEY")
+deployment_name = os.environ.get("MODEL_DEPLOYMENT_NAME")
+endpoint = os.environ.get("PROJECT_ENDPOINT")
+
 async def main():
     kernel = Kernel()
 
@@ -19,9 +25,9 @@ async def main():
     kernel.add_service(
         AzureChatCompletion(
             service_id=service_id, 
-            api_key="FKfCvE2h93cUfV4tL60M7hYelCyApkVS4NrRUJt0GL99SlDLBSKLJQQJ99BHACHYHv6XJ3w3AAAAACOGayCs",
-            deployment_name="gpt-4o",
-            endpoint="https://jbao6-8161-resource.openai.azure.com/"
+            api_key= api_key,
+            deployment_name= deployment_name,
+            endpoint=endpoint
         )
     )
 

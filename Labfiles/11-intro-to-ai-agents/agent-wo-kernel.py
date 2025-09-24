@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, AzureChatCompletion
-from semantic_kernel.connectors.ai import FunctionChoiceBehavior
+from semantic_kernel.connectors.ai import FunctionChoiceBehavior, PromptExecutionSettings
 from semantic_kernel.functions import kernel_function, KernelArguments
 from semantic_kernel.kernel import Kernel
 import random   
@@ -54,28 +54,23 @@ api_key = os.environ.get("API_KEY")
 deployment_name = os.environ.get("MODEL_DEPLOYMENT_NAME")
 endpoint = os.environ.get("PROJECT_ENDPOINT")
 
-# By creating a Kernel first, adding the service to it, then providing the kernel in the agent
+# By providing the chat completion service directly
 
-# Create a kernel
-kernel = Kernel()
-
-# Add the AzureChatCompletion AI Service to the Kernel
 service_id = "agent"
-kernel.add_service(
-    AzureChatCompletion(
-        service_id=service_id, 
-        api_key= api_key,
-        deployment_name= deployment_name,
-        endpoint=endpoint
-    )
+
+ai_service = AzureChatCompletion(
+    service_id=service_id, 
+    api_key= api_key,
+    deployment_name= deployment_name,
+    endpoint=endpoint
 )
 
-settings = kernel.get_prompt_execution_settings_from_service_id(service_id=service_id)
 # Configure the function choice behavior to auto invoke kernel functions
+settings =  PromptExecutionSettings()
 settings.function_choice_behavior = FunctionChoiceBehavior.Auto()
 
 agent = ChatCompletionAgent(
-    kernel=kernel,
+    service=ai_service,
     name="TravelAgent",
     plugins=[DestinationsPlugin()],
     instructions="You are a helpful AI Agent that can help plan vacations for customers at random destinations",
