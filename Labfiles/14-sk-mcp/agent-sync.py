@@ -22,15 +22,15 @@ endpoint = os.environ.get("PROJECT_ENDPOINT")
 
 async def main():
 
-    async with MCPStdioPlugin(
+        plugin = MCPStdioPlugin(
             name="inventory",
             description="inventory Plugin",
             command="python",
             args=[".\\src\\local-mcp\\server.py"],
             env={},
-        ) as plugin: 
+        )
 
-        
+        await plugin.connect()
 
         # Configure the function choice behavior to auto invoke kernel functions
         settings =  PromptExecutionSettings()
@@ -62,6 +62,8 @@ async def main():
             response = await agent.get_response(messages=user_message, thread=thread)
             thread = response.thread
             print("*** Agent:", response.content)
+
+        await plugin.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
