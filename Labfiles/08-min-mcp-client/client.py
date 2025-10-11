@@ -60,7 +60,6 @@ async def main():
 
     mcp_server_url = sys.argv[1]
 
-    # Connect to a local MCP server running on port 8000
     async with MCPClient(mcp_server_url) as client:
         tools = await client.tool_list()
         print(f"{len(tools)} tools are available!\n")

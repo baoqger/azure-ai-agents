@@ -7,6 +7,7 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.connectors.mcp import MCPSsePlugin, MCPStdioPlugin
 from semantic_kernel.connectors.ai import FunctionChoiceBehavior, PromptExecutionSettings
 from semantic_kernel.functions import kernel_function, KernelArguments
+from semantic_kernel.contents import FunctionCallContent, FunctionResultContent, StreamingTextContent
 
 load_dotenv()
 
@@ -50,7 +51,7 @@ async def main():
             arguments=KernelArguments(settings=settings),
         )
         print("Agent initialized")
-        print(f"agent: {agent}")
+        # print(f"agent: {agent}")
         thread: ChatHistoryAgentThread = None
         user_messages = [
             "What are the current inventory levels?",
@@ -58,10 +59,18 @@ async def main():
             ]
 
         for user_message in user_messages:
-            print("*** User:", user_message)
-            response = await agent.get_response(messages=user_message, thread=thread)
-            thread = response.thread
-            print("*** Agent:", response.content)
+            full_response: list[str] = []
+            async for response in agent.invoke_stream(
+                messages=user_message,
+                thread=thread,
+                #on_intermediate_message=handle_intermediate_steps,
+            ):
+                thread = response.thread
+                content_items = list(response.items)
+                for item in content_items:
+                    if isinstance(item, StreamingTextContent) and item.text:
+                        full_response.append(item.text)
+            print(f"agent: {''.join(full_response)}")
 
 if __name__ == "__main__":
     asyncio.run(main())
